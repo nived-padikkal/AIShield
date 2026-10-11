@@ -1,0 +1,343 @@
+command,category
+dir,navigation
+dir /a,navigation
+dir /s,navigation
+cd ..,navigation
+cd C:\Users\user\project,navigation
+cd /d D:\work,navigation
+pwd,navigation
+Get-Location,navigation
+Get-ChildItem,navigation
+Get-ChildItem -Force,navigation
+Get-ChildItem -Recurse,navigation
+ls,navigation
+tree,navigation
+tree /F,navigation
+pushd C:\project,navigation
+popd,navigation
+type README.md,read files
+type package.json,read files
+type requirements.txt,read files
+type Dockerfile,read files
+type .gitignore,read files
+Get-Content README.md,read files
+Get-Content package.json,read files
+Get-Content -Path config.json,read files
+Get-Content app.log -Tail 100,read files
+Get-Content app.log -Wait,read files
+head -n 20 log.txt,read files
+tail -n 100 app.log,read files
+more README.md,read files
+fc file1.txt file2.txt,read files
+Compare-Object (Get-Content a.txt) (Get-Content b.txt),read files
+Get-FileHash file.iso -Algorithm MD5,read files
+Get-FileHash release.zip -Algorithm SHA256,read files
+whoami,system info
+hostname,system info
+echo %USERNAME%,system info
+echo %USERPROFILE%,system info
+echo %COMPUTERNAME%,system info
+echo %PROCESSOR_ARCHITECTURE%,system info
+systeminfo,system info
+Get-ComputerInfo,system info
+Get-ComputerInfo | Select-Object CsName,OsVersion,system info
+ver,system info
+Get-Date,system info
+Get-PSDrive,system info
+Get-Volume,system info
+Get-Process | Measure-Object,system info
+$PSVersionTable,system info
+Get-ExecutionPolicy,system info
+echo %PATH%,system info
+where.exe python,system info
+where.exe node,system info
+where.exe git,system info
+python --version,system info
+node -v,system info
+npm -v,system info
+git --version,system info
+docker --version,system info
+ipconfig,network info
+ipconfig /all,network info
+ipconfig /release,network info
+ipconfig /renew,network info
+Get-NetIPAddress,network info
+Get-NetConnectionProfile,network info
+Get-NetAdapter,network info
+Get-DnsClientServerAddress,network info
+ping -n 4 google.com,network info
+ping -n 1 localhost,network info
+tracert google.com,network info
+nslookup example.com,network info
+Resolve-DnsName example.com,network info
+netstat -an,network info
+netstat -ano,network info
+netstat -an | findstr LISTENING,network info
+Test-NetConnection -ComputerName localhost -Port 3000,network info
+Test-NetConnection google.com,network info
+curl -I https://example.com,network info
+curl -s http://localhost:3000/health,network info
+curl -s https://api.github.com/repos/torvalds/linux,network info
+Invoke-WebRequest -Uri https://example.com,network info
+Invoke-WebRequest -Uri http://localhost:8080/status,network info
+Get-Process,network info
+tasklist,network info
+tasklist /FI "IMAGENAME eq node.exe",processes
+tasklist /FI "IMAGENAME eq python.exe",processes
+Get-Process node,processes
+Get-Process python,processes
+Get-Process | Where-Object {$_.CPU -gt 100},processes
+taskkill /PID 1234,processes
+taskkill /PID 1234 /F,processes
+taskkill /IM node.exe,processes
+taskkill /IM node.exe /F,processes
+Stop-Process -Id 1234,processes
+Stop-Process -Name node,processes
+Stop-Process -Name node -Force,processes
+Get-Job,processes
+Start-Sleep -Seconds 5,processes
+Start-Process python app.py,processes
+Start-Process -NoNewWindow python app.py,processes
+mkdir build,files
+mkdir src\components,files
+New-Item -ItemType Directory -Path build,files
+New-Item -ItemType File -Path file.txt,files
+New-Item -ItemType File -Path .gitkeep,files
+copy a.txt b.txt,files
+Copy-Item a.txt b.txt,files
+Copy-Item -Recurse src backup,files
+Copy-Item .env.example .env,files
+xcopy src backup /E /I,files
+robocopy src backup /E,files
+move old.txt new.txt,files
+Move-Item old.txt new.txt,files
+Rename-Item file.txt newname.txt,files
+del temp.log,files
+del /f temp.log,files
+Remove-Item temp.log,files
+Remove-Item -Force temp.log,files
+Remove-Item -Recurse -Force node_modules,files
+Remove-Item -Recurse -Force build,dist,files
+rmdir /s /q node_modules,files
+New-Item -ItemType SymbolicLink -Path shared -Target ..\shared,files
+icacls file.txt,files
+icacls file.txt /grant Everyone:F,files
+compress -Path dist -DestinationPath dist.zip,files
+Compress-Archive -Path dist -DestinationPath dist.zip,files
+Expand-Archive -Path release.zip -DestinationPath .,files
+tar -czf backup.tar.gz src,files
+tar -xzf archive.tar.gz,files
+Get-ChildItem -Recurse -Filter *.py,search
+Get-ChildItem -Recurse -Filter *.js | Select-Object FullName,search
+Get-ChildItem -Recurse -File -Include *.log,search
+Get-ChildItem . -Filter *.pyc -Recurse | Remove-Item,search
+Get-ChildItem . -Directory -Filter node_modules -Recurse,search
+findstr /s /i "TODO" *.py,search
+findstr /s /i "console.log" *.js,search
+findstr /i error app.log,search
+Select-String -Path *.py -Pattern "TODO",search
+Select-String -Path src\*.js -Pattern "console.log",search
+Select-String -Path *.log -Pattern "error" -CaseSensitive:$false,search
+Get-ChildItem -Recurse -Filter *.js | Select-String -Pattern "function",search
+rg "def main",search
+rg -n TODO --glob *.ts,search
+Get-History,search
+Get-History | Select-Object -Last 10,search
+Set-Content -Path file.txt -Value "new content",text editing
+Add-Content -Path notes.md -Value "# TODO",text editing
+Add-Content -Path .gitignore -Value "node_modules/",text editing
+Set-Content -Path out.txt -Value "hello",text editing
+Out-File -FilePath out.txt -InputObject "hello",text editing
+code .,text editing
+notepad README.md,text editing
+notepad config.yml,text editing
+git status,git
+git log --oneline,git
+git log --oneline -n 10,git
+git diff,git
+git diff --staged,git
+git add .,git
+git add -A,git
+git commit -m "fix bug",git
+git commit -am "update docs",git
+git push origin main,git
+git pull,git
+git pull --rebase,git
+git fetch --all,git
+git clone https://github.com/user/repo.git,git
+git clone git@github.com:user/repo.git,git
+git checkout -b feature-branch,git
+git checkout main,git
+git switch -c fix/login,git
+git merge develop,git
+git stash,git
+git stash pop,git
+git branch -a,git
+git remote -v,git
+git tag v1.0.0,git
+git config user.name "Dev",git
+git config --global user.email "dev@example.com",git
+git reset --hard HEAD~1,git
+gh pr create --fill,git
+gh pr list,git
+gh issue list,git
+python app.py,python
+python -m venv env,python
+python -m venv .venv,python
+.venv\Scripts\activate,python
+venv\Scripts\activate,python
+pip install -r requirements.txt,python
+pip install requests,python
+pip install --upgrade pip,python
+pip list,python
+pip freeze > requirements.txt,python
+pytest,python
+pytest -q,python
+pytest tests/ -x,python
+python -m pytest -q,python
+python -m unittest discover,python
+python -m http.server 8000,python
+python manage.py migrate,python
+python manage.py runserver,python
+flask run,python
+uvicorn main:app --reload,python
+black .,python
+flake8 src,python
+ruff check .,python
+mypy src,python
+python -c "print('hello')",python
+python -m json.tool data.json,python
+poetry install,python
+poetry run pytest,python
+npm install,node
+npm ci,node
+npm install express,node
+npm install --save-dev typescript,node
+npm run build,node
+npm run dev,node
+npm run lint,node
+npm test,node
+npm start,node
+npm audit,node
+npm outdated,node
+npx create-react-app my-app,node
+npx prettier --write .,node
+npx eslint . --fix,node
+npx tsc --noEmit,node
+yarn install,node
+yarn add lodash,node
+yarn build,node
+pnpm install,node
+pnpm run dev,node
+node server.js,node
+node -e "console.log(1+1)",node
+bun install,node
+deno run main.ts,node
+make,build tools
+make build,build tools
+make test,build tools
+make clean,build tools
+cmake -B build,build tools
+cmake --build build,build tools
+gcc -o main main.c,build tools
+g++ -std=c++17 main.cpp -o main,build tools
+.\main.exe,build tools
+cargo build --release,build tools
+cargo test,build tools
+cargo run,build tools
+go build ./...,build tools
+go test ./...,build tools
+go run main.go,build tools
+mvn clean install,build tools
+mvn test,build tools
+gradle build,build tools
+.\gradlew.bat build,build tools
+dotnet build,build tools
+dotnet test,build tools
+java -jar app.jar,build tools
+javac Main.java,build tools
+composer install,build tools
+php artisan serve,build tools
+docker ps,docker and cloud
+docker ps -a,docker and cloud
+docker images,docker and cloud
+docker build -t myapp .,docker and cloud
+docker run -p 8080:80 nginx,docker and cloud
+docker run -d --name web -p 3000:3000 myapp,docker and cloud
+docker exec -it web bash,docker and cloud
+docker logs -f web,docker and cloud
+docker stop web,docker and cloud
+docker rm web,docker and cloud
+docker rmi myapp,docker and cloud
+docker pull ubuntu:22.04,docker and cloud
+docker compose up -d,docker and cloud
+docker compose down,docker and cloud
+docker compose logs -f,docker and cloud
+docker system prune -f,docker and cloud
+kubectl get pods,docker and cloud
+kubectl get svc,docker and cloud
+kubectl describe pod web-1,docker and cloud
+kubectl logs web-1,docker and cloud
+kubectl apply -f deploy.yaml,docker and cloud
+kubectl config current-context,docker and cloud
+helm list,docker and cloud
+helm install myapp ./chart,docker and cloud
+terraform init,docker and cloud
+terraform plan,docker and cloud
+terraform apply,docker and cloud
+aws s3 ls,docker and cloud
+aws sts get-caller-identity,docker and cloud
+gcloud config list,docker and cloud
+az account show,docker and cloud
+winget install Git.Git,packages and services
+winget upgrade --all,packages and services
+choco install nodejs,packages and services
+choco upgrade all,packages and services
+scoop install git,packages and services
+Get-Service,packages and services
+Get-Service -Name nginx,packages and services
+Start-Service nginx,packages and services
+Stop-Service nginx,packages and services
+Restart-Service nginx,packages and services
+Get-Service | Where-Object {$_.Status -eq "Running"},packages and services
+Get-WindowsFeature,packages and services
+Get-Process | Sort-Object CPU -Descending | Select-Object -First 10,packages and services
+Get-EventLog -LogName Application -Newest 50,packages and services
+Get-WinEvent -LogName System -MaxEvents 50,packages and services
+Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2} -MaxEvents 20,packages and services
+Get-Content C:\Windows\Logs\CBS\CBS.log -Tail 50,packages and services
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser,packages and services
+Get-AppxPackage,packages and services
+Get-Package,packages and services
+Get-HotFix,packages and services
+Get-ComputerRestorePoint,packages and services
+$env:PATH = "$env:PATH;C:\tools",shell and env
+$env:NODE_ENV = "production",shell and env
+$env:API_URL = "https://api.example.com",shell and env
+$env:PYTHONPATH = (Get-Location).Path,shell and env
+$env:FLASK_APP = "app.py",shell and env
+Remove-Item Env:\FOO,shell and env
+Set-Alias ll Get-ChildItem,shell and env
+. .\.env,shell and env
+Get-ChildItem Env: | Sort-Object Name,shell and env
+Get-ChildItem Env: | Where-Object {$_.Name -like "*PATH*"},shell and env
+$ErrorActionPreference = "Stop",shell and env
+Clear-Host,shell and env
+exit,shell and env
+$true,shell and env
+$false,shell and env
+if (Test-Path package.json) { Write-Host "found" },shell and env
+if (-Not (Test-Path node_modules)) { npm install },shell and env
+Get-Help ls,shell and env
+Get-Help Get-ChildItem -Detailed,shell and env
+ssh user@server,ssh and keys
+ssh -i C:\Users\user\.ssh\id_rsa user@server,ssh and keys
+ssh user@server "uptime",ssh and keys
+ssh-keygen -t ed25519 -C "dev@example.com",ssh and keys
+ssh-add C:\Users\user\.ssh\id_ed25519,ssh and keys
+ssh-keyscan github.com >> C:\Users\user\.ssh\known_hosts,ssh and keys
+ssh -T git@github.com,ssh and keys
+whoami /priv,privileges
+runas /user:admin cmd,privileges
+Start-Process powershell -Verb RunAs,privileges
+Start-Process cmd -Verb RunAs,privileges
