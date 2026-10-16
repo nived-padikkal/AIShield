@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aishield-pg
+    environment:
+      POSTGRES_USER: aishield
+      POSTGRES_PASSWORD: aishield
+      POSTGRES_DB: aishield
+    ports:
+      - "5432:5432"
+    volumes:
+      - aishield-pgdata:/var/lib/postgresql/data
+
+volumes:
+  aishield-pgdata:

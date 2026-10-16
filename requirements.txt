@@ -1,3 +1,6 @@
 pyyaml
 scikit-learn
 truffleHog
+flask
+flask-cors
+psycopg[binary]

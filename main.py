@@ -386,12 +386,40 @@ def get_model():
 # --------------------------------------------------------------------------------------
 # Public API
 # --------------------------------------------------------------------------------------
-def check(cmd, model=None):
+URL_HOST_RE = re.compile(r"(?:https?|ftp)://([A-Za-z0-9._-]+)(?::\d+)?(?:[/?#\s\"']|$)")
+
+
+def extract_domains(text):
+    """Return lowercase hosts from any URL found in the command text."""
+    return {m.group(1).lower().rstrip(".") for m in URL_HOST_RE.finditer(text)}
+
+
+def domain_whitelisted(host, allowed_domains):
+    """Exact match, or wildcard entry like *.example.com (covers subdomains)."""
+    if host in allowed_domains:
+        return True
+    for entry in allowed_domains:
+        if entry.startswith("*.") and host.endswith(entry[1:]):
+            return True
+    return False
+
+
+def check(cmd, model=None, allowed_domains=None):
     text = prep(cmd)
     if not text:
         return Result(cmd, "ALLOW", note="empty command")
 
     findings = scan_rules(text)
+
+    # Domain whitelist: with a non-empty list, URLs to other hosts are disallowed.
+    if allowed_domains:
+        allowed = {d.strip().lower() for d in allowed_domains if d and d.strip()}
+        for host in sorted(extract_domains(text)):
+            if not domain_whitelisted(host, allowed):
+                findings.append(Finding(
+                    "HIGH", "domain-not-whitelisted", "-",
+                    f"data would be posted/passed to {host}, which is not in the domain whitelist"))
+
     findings.sort(key=lambda f: -SEV_ORDER[f.severity])
     if any(SEV_ORDER[f.severity] >= 2 for f in findings):
         return Result(cmd, "BLOCK", findings)
