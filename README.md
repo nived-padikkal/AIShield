@@ -2,6 +2,8 @@
 
 Screen an AI agent's shell commands for malicious behaviour. Every decision is classified as **ALLOW**, **REVIEW**, or **BLOCK** and persisted in PostgreSQL. A React dashboard shows live allow / disallow status.
 
+> Full write-up: [PROJECT_REPORT.md](PROJECT_REPORT.md) — architecture, decision pipeline, verification results.
+
 ## Project structure
 
 ```
