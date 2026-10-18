@@ -17,7 +17,13 @@ Run in a normal terminal (admin not required):
 
 Options:
     --api URL            ask your AIShield backend for a suggested verdict
+    --api-decide         decide from the API verdict instead of prompting:
+                         ALLOW resumes the command, BLOCK kills it; REVIEW and
+                         API errors still prompt (no answer = block).
+                         Implies --api http://127.0.0.1:5000/api/check when
+                         no --api URL is given.
     --auto-block         with --api: block without asking when API says BLOCK
+    --timeout SECONDS    how long to wait for A/B (default 30)
     --parent prefix=Name watch a different parent (repeatable). Replaces the
                          built-in WATCH_PARENTS list.
                          e.g. --parent cursor=Cursor --parent codex=Codex
@@ -60,6 +66,7 @@ SHELLS = {"powershell.exe", "pwsh.exe", "cmd.exe", "bash.exe", "wsl.exe"}
 LOG_FILE = "aishield_decisions.jsonl"
 DISCOVERY_LOG = "aishield_discovery.log"
 POLL_SECONDS = 0.005
+DEFAULT_API_URL = "http://127.0.0.1:5000/api/check"
 
 
 def parse_parents(items):
@@ -97,7 +104,7 @@ def ask_api(url, command):
             data=json.dumps({"command": command}).encode(),
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=2) as r:
+        with urllib.request.urlopen(req, timeout=5) as r:
             return str(json.loads(r.read().decode()).get("verdict", "?")).upper()
     except Exception:
         return "UNAVAILABLE"
@@ -224,12 +231,19 @@ def main():
     ap.add_argument("--timeout", type=int, default=30, help="seconds to wait for A/B")
     ap.add_argument("--auto-block", action="store_true",
                     help="with --api: block automatically when the API says BLOCK")
+    ap.add_argument("--api-decide", action="store_true",
+                    help="decide from the API verdict: ALLOW resumes, BLOCK kills; "
+                         "REVIEW / errors still ask you (no answer = block). "
+                         "Uses --api, or the default backend URL if omitted")
     ap.add_argument("--parent", action="append", metavar="PREFIX=NAME",
                     help="watch this parent process (repeatable); replaces the "
                          "built-in WATCH_PARENTS list")
     ap.add_argument("--discover", action="store_true",
                     help="only print new shells + parent chain, to find parents")
     args = ap.parse_args()
+
+    if args.api_decide and not args.api:
+        args.api = DEFAULT_API_URL
 
     if args.discover:
         discover()
@@ -243,6 +257,11 @@ def main():
     print("AIShield monitor running. Watching these agents:")
     for prefix, label in parents.items():
         print(f"  {label:<16} <- process name starts with '{prefix}'")
+    if args.api_decide:
+        print(f"\n  MODE: API decides (backend {args.api})")
+        print("  ALLOW -> resume   BLOCK -> kill   REVIEW/error -> you (A/B)")
+    elif args.auto_block:
+        print(f"\n  MODE: API suggests ({args.api}), BLOCK is auto-enforced")
     print(f"\n  A = allow   B = block   (no answer in {args.timeout}s = block)")
     print(f"  Decisions are logged to {LOG_FILE}. Ctrl+C to stop.\n")
 
@@ -271,11 +290,16 @@ def main():
             print(f"COMMAND : (pid {proc.pid}, frozen)")
             print(f"  {cmd}")
             if args.api:
-                print(f"AIShield suggests: {verdict}")
+                print(f"AIShield verdict: {verdict}")
 
-            if args.auto_block and verdict == "BLOCK":
+            if args.api_decide and verdict in ("ALLOW", "BLOCK"):
+                choice = "a" if verdict == "ALLOW" else "b"
+                note = f"api verdict {verdict}"
+            elif args.auto_block and verdict == "BLOCK":
                 choice, note = "b", "auto-blocked by API verdict"
             else:
+                if args.api_decide:
+                    print(f"  API returned {verdict} - needs your decision")
                 print("  [A] allow    [B] block ...", flush=True)
                 choice = wait_key(args.timeout)
                 note = "user" if choice else "timeout"

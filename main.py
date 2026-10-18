@@ -46,21 +46,26 @@ RULES_DIR = BASE / "rules"
 TESTS_DIR = BASE / "tests"
 
 # Supported platforms: linux, windows, macos, containers
-# To use multiple: PLATFORMS = ["linux", "windows"]
-PLATFORMS = ["linux", "windows"]
+DEFAULT_PLATFORM = "windows" if sys.platform.startswith("win") else "linux"
+PLATFORMS = [DEFAULT_PLATFORM, "windows" if DEFAULT_PLATFORM == "linux" else "linux"]
 
-# Pick first available platform from list
-PLATFORM = next((p for p in PLATFORMS if
-                 (BASE / "dataset" / f"atomic_{p}_commands.csv.gz").exists() or
-                 (BASE / "dataset" / f"atomic_{p}_commands.csv").exists()),
-                PLATFORMS[0])
 
-# Attack corpus files
-ATTACK_CSV = next((p for p in (BASE / "dataset" / "out" / f"atomic_{PLATFORM}_commands.csv.gz",
-                               BASE / "dataset" / "out" / f"atomic_{PLATFORM}_commands.csv",
-                               BASE / "dataset" / f"atomic_{PLATFORM}_commands.csv.gz",
-                               BASE / "dataset" / f"atomic_{PLATFORM}_commands.csv") if p.exists()),
-                  BASE / "dataset" / "out" / f"atomic_{PLATFORM}_commands.csv.gz")
+def _find_dataset(p):
+    candidates = [
+        BASE / "dataset" / "out" / f"atomic_{p}_commands.csv.gz",
+        BASE / "dataset" / "out" / f"atomic_{p}_commands.csv",
+        BASE / "dataset" / f"atomic_{p}_commands.csv.gz",
+        BASE / "dataset" / f"atomic_{p}_commands.csv",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return None
+
+
+# Pick platform whose dataset exists, prioritizing current OS
+PLATFORM = next((p for p in PLATFORMS if _find_dataset(p) is not None), DEFAULT_PLATFORM)
+ATTACK_CSV = _find_dataset(PLATFORM) or (BASE / "dataset" / "out" / f"atomic_{PLATFORM}_commands.csv.gz")
 HARMLESS_CSV = BASE / "harmless" / f"harmless_{PLATFORM}_commands.csv"
 # authoritative MITRE ATT&CK technique-name lookup (active Enterprise techniques).
 TECHNAMES_CSV = BASE / "dataset" / "out" / "attack_technique_names.csv"

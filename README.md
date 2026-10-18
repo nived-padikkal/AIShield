@@ -3,7 +3,7 @@
 Screen an AI agent's shell commands for malicious behaviour. Every command gets an
 **ALLOW**, **REVIEW**, or **BLOCK** verdict, the decision is persisted in PostgreSQL,
 and a React dashboard shows live allow / disallow status. An optional Windows monitor
-freezes agent-spawned shells and asks you before they run.
+freezes agent-spawned shells and decides itself from the API verdict (or asks you).
 
 ## How it decides
 
@@ -166,21 +166,36 @@ curl -X POST http://localhost:5000/api/check \
 
 `monitor/aishield_monitor.py` watches shells started by known AI agents (GitHub
 Copilot, Codex, Antigravity — configurable), freezes each one as it appears, and
-waits for your decision:
+decides:
 
 ```bash
 py -m pip install psutil        # not part of requirements.txt
-py monitor/aishield_monitor.py
 
-py monitor/aishield_monitor.py --api http://127.0.0.1:5000/api/check  # get a suggested verdict
-py monitor/aishield_monitor.py --api ... --auto-block                 # block automatically when API says BLOCK
-py monitor/aishield_monitor.py --discover                             # only print new shells + parent chain
+py monitor/aishield_monitor.py --api-decide   # API decides (backend must be running)
+py monitor/aishield_monitor.py                # interactive: you press A/B
+py monitor/aishield_monitor.py --api-decide --timeout 10
+py monitor/aishield_monitor.py --api http://host:5000/api/check --api-decide  # remote backend
+py monitor/aishield_monitor.py --api ... --auto-block   # suggest only, auto-enforce BLOCK
+py monitor/aishield_monitor.py --discover               # print new shells + parent chain
 py monitor/aishield_monitor.py --parent cursor=Cursor --parent codex=Codex  # watch other agents
 ```
 
-`A` = allow (resume), `B` = block (kill the process tree). No answer within
-`--timeout` (default 30 s) = block, and stopping the monitor also blocks anything
-still frozen (fail closed). Decisions are appended to `aishield_decisions.jsonl`.
+Modes:
+
+| Mode | What happens |
+|------|--------------|
+| `--api-decide` | Decision comes from the API verdict: `ALLOW` → resume, `BLOCK` → kill. `REVIEW` and API errors ask you (`A`/`B`), and no answer within `--timeout` blocks. Implies `--api http://127.0.0.1:5000/api/check` if no URL is given. |
+| `--auto-block` (with `--api`) | API only suggests; `BLOCK` is enforced automatically, everything else asks you. |
+| plain | Fully manual: you press `A` = allow (resume) or `B` = block (kill the process tree). |
+
+Whatever the mode, no answer within `--timeout` (default 30 s) = block, and
+stopping the monitor also blocks anything still frozen (fail closed). Decisions
+are appended to `aishield_decisions.jsonl`, including the API verdict and the
+reason (`api verdict BLOCK`, `user`, `timeout`), so you can audit them later.
+
+```bash
+py monitor/aishield_monitor.py --api-decide   # typical run: API is source of truth
+```
 
 Known limits: it detects and freezes *after* the OS starts the process (usually
 within milliseconds), only covers shells launched directly by a watched parent, and
