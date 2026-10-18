@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
-import { clearHistory, getDomains, getHistory, getStats } from "./api.js";
+import { clearHistory, getHistory, getStats } from "./api.js";
 import CommandChecker from "./components/CommandChecker.jsx";
-import DomainWhitelist from "./components/DomainWhitelist.jsx";
 import HistoryTable from "./components/HistoryTable.jsx";
 import StatsCard from "./components/StatsCard.jsx";
 
 export default function App() {
   const [stats, setStats] = useState(null);
   const [history, setHistory] = useState([]);
-  const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
     try {
-      const [s, h, d] = await Promise.all([getStats(), getHistory(), getDomains()]);
+      const [s, h] = await Promise.all([getStats(), getHistory()]);
       setStats(s);
       setHistory(h);
-      setDomains(d);
       setError("");
     } catch (err) {
       setError(`Cannot reach AiShield API: ${err.message}`);
@@ -57,8 +54,6 @@ export default function App() {
       </section>
 
       <CommandChecker onChecked={refresh} />
-
-      <DomainWhitelist domains={domains} onChanged={refresh} />
 
       <section className="panel">
         <div className="panel-header">

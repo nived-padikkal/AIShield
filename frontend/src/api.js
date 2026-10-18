@@ -15,9 +15,3 @@ export const getHistory = () => request("/api/history");
 export const checkCommand = (command) =>
   request("/api/check", { method: "POST", body: JSON.stringify({ command }) });
 export const clearHistory = () => request("/api/history", { method: "DELETE" });
-
-export const getDomains = () => request("/api/domains");
-export const addDomain = (domain) =>
-  request("/api/domains", { method: "POST", body: JSON.stringify({ domain }) });
-export const removeDomain = (domain) =>
-  request("/api/domains", { method: "DELETE", body: JSON.stringify({ domain }) });

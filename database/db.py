@@ -104,46 +104,6 @@ def clear_checks():
         return cur.rowcount
 
 
-def list_domains():
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, domain, created_at FROM domains ORDER BY domain"
-        )
-        return [
-            {
-                "id": r["id"],
-                "domain": r["domain"],
-                "created_at": r["created_at"].isoformat(timespec="seconds") if r["created_at"] else None,
-            }
-            for r in cur.fetchall()
-        ]
-
-
-def add_domain(domain):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO domains (domain) VALUES (%s)
-            ON CONFLICT (domain) DO UPDATE SET domain = EXCLUDED.domain
-            RETURNING id, domain, created_at
-            """,
-            (domain,),
-        )
-        r = cur.fetchone()
-        return {
-            "id": r["id"],
-            "domain": r["domain"],
-            "created_at": r["created_at"].isoformat(timespec="seconds") if r["created_at"] else None,
-        }
-
-
-def remove_domain(domain):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("DELETE FROM domains WHERE domain = %s RETURNING id", (domain,))
-        r = cur.fetchone()
-        return r["id"] if r else None
-
-
 def _row_to_entry(row):
     if row is None:
         return None

@@ -6,7 +6,6 @@ Usage:
 """
 from . import db
 from .db import (
-    add_domain,
     clear_checks,
     connection_url,
     count_by_status,
@@ -14,14 +13,11 @@ from .db import (
     init_db,
     insert_check,
     list_checks,
-    list_domains,
     ping,
-    remove_domain,
 )
 
 __all__ = [
     "db",
-    "add_domain",
     "clear_checks",
     "connection_url",
     "count_by_status",
@@ -29,7 +25,5 @@ __all__ = [
     "init_db",
     "insert_check",
     "list_checks",
-    "list_domains",
     "ping",
-    "remove_domain",
 ]

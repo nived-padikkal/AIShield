@@ -13,11 +13,3 @@ CREATE TABLE IF NOT EXISTS checks (
 
 CREATE INDEX IF NOT EXISTS idx_checks_created_at ON checks (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_checks_status     ON checks (status);
-
--- Domain whitelist: commands may only post/pass data to these domains.
--- Supports exact hosts and wildcards like *.example.com.
-CREATE TABLE IF NOT EXISTS domains (
-    id         BIGSERIAL PRIMARY KEY,
-    domain     TEXT NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);

@@ -95,9 +95,6 @@ Exit codes: `0` ALLOW, `1` REVIEW, `2` BLOCK.
 | GET    | `/api/history`    | Recent decisions (newest first)      |
 | GET    | `/api/stats`      | Counts by status                     |
 | DELETE | `/api/history`    | Clear all decisions                  |
-| GET    | `/api/domains`    | List domain whitelist                |
-| POST   | `/api/domains`    | Add a domain to the whitelist        |
-| DELETE | `/api/domains`    | Remove a domain from the whitelist   |
 
 Example:
 
@@ -106,25 +103,6 @@ curl -X POST http://localhost:5000/api/check \
   -H "Content-Type: application/json" \
   -d "{\"command\": \"ls -la\"}"
 ```
-
-## Domain whitelist
-
-Manage the whitelist from the dashboard (**Domain Whitelist** panel) or via the API:
-
-```bash
-curl -X POST http://localhost:5000/api/domains \
-  -H "Content-Type: application/json" \
-  -d "{\"domain\": \"api.example.com\"}"
-
-curl -X DELETE http://localhost:5000/api/domains \
-  -H "Content-Type: application/json" \
-  -d "{\"domain\": \"api.example.com\"}"
-```
-
-- While the whitelist is **empty**, domain filtering is disabled (baseline behaviour).
-- Once **any domain is added**, every checked command is scanned for URLs: data posted/passed to a host that is not whitelisted results in a **BLOCK** (finding: `domain-not-whitelisted`).
-- Wildcards work: `*.example.com` allows all subdomains of `example.com`.
-- Invalid entries are rejected (`400`), e.g. strings with spaces or schemes.
 
 ## Optional: ML attack-similarity data
 
