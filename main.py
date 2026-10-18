@@ -28,6 +28,10 @@ Usage
   python main.py --json "cmd"    machine-readable output (exit code 2=BLOCK, 1=REVIEW, 0=ALLOW)
   python main.py --selftest      run built-in test cases
   python main.py --stats         show how the datasets were cleaned
+  python main.py --no-store      skip saving the decision to the dashboard database
+
+CLI and interactive checks are stored in PostgreSQL (database/db.py) so they appear
+in the dashboard; saving is best effort and never changes the verdict or exit code.
 
 Use from another script:
   from main import check
@@ -418,6 +422,38 @@ def check(cmd, model=None):
     return Result(cmd, "ALLOW", note=f"no known attack pattern [attack={a:.2f}, benign={b:.2f}]")
 
 
+# --------------------------------------------------------------------------------------
+# Persist CLI decisions to PostgreSQL so they show up in the dashboard
+# --------------------------------------------------------------------------------------
+STATUS_OF = {"ALLOW": "allow", "REVIEW": "review", "BLOCK": "disallow", "ERROR": "error"}
+_DB_READY = False
+_DB_WARNED = False
+
+
+def record(r):
+    """Insert a Result into the `checks` table (best effort, never raises).
+
+    Returns True when the row was stored. The API writes its own rows, so this
+    only runs for CLI / interactive checks.
+    """
+    global _DB_READY, _DB_WARNED
+    try:
+        from database import db
+        if not _DB_READY:
+            db.init_db()
+            _DB_READY = True
+        d = r.to_dict()
+        db.insert_check(command=d["command"], verdict=d["verdict"],
+                        status=STATUS_OF.get(d["verdict"], "error"),
+                        note=d.get("note", ""), findings=d.get("findings", []))
+        return True
+    except Exception as exc:
+        if not _DB_WARNED:
+            _DB_WARNED = True
+            print(f"note: decision not saved to the dashboard DB ({exc})", file=sys.stderr)
+        return False
+
+
 def format_result(r):
     lines = [f"Verdict : {r.verdict}"]
     if r.findings:
@@ -451,6 +487,8 @@ def main():
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--stats", action="store_true")
+    ap.add_argument("--no-store", action="store_true",
+                    help="do not save the decision to the dashboard database")
     args = ap.parse_args()
 
     if args.selftest:
@@ -462,6 +500,8 @@ def main():
     def run(c):
         r = check(c)
         print(json.dumps(r.to_dict(), indent=2) if args.json else format_result(r))
+        if not args.no_store:
+            record(r)
         return r
 
     if args.command:

